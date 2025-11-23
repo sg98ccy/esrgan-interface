@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pillow
+torch
+torchvision
+py-real-esrgan
+python-multipart
+pytest
+huggingface_hub<0.20
