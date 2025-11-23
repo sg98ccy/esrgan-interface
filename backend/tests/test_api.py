@@ -23,22 +23,22 @@ def _create_dummy_png(width: int = 16, height: int = 16) -> bytes:
 
 def test_upscale_endpoint_returns_png():
     """
-    Sending a valid PNG should return an upscaled PNG image.
+    Sending a valid PNG should return a JSON response with base64 image.
     """
     img_bytes = _create_dummy_png()
 
     files = {"file": ("test.png", img_bytes, "image/png")}
-    response = client.post("/api/upscale", files=files)
+    data = {"scale": "4"}
+    response = client.post("/upscale", files=files, data=data)
 
     assert response.status_code == 200
-    assert response.headers["content-type"] == "image/png"
-
-    out_bytes = response.content
-    out_img = Image.open(BytesIO(out_bytes))
-
-    # Should be at least larger than input in each dimension
-    assert out_img.size[0] >= 16 * 2
-    assert out_img.size[1] >= 16 * 2
+    result = response.json()
+    
+    assert result["success"] is True
+    assert "processedImage" in result
+    assert result["processedImage"].startswith("data:image/png;base64,")
+    assert "metadata" in result
+    assert result["metadata"]["scale"] == 4
 
 
 def test_upscale_endpoint_rejects_non_image():
@@ -46,6 +46,8 @@ def test_upscale_endpoint_rejects_non_image():
     Non image payloads should be rejected with a 400 error.
     """
     files = {"file": ("test.txt", b"not an image", "text/plain")}
-    response = client.post("/api/upscale", files=files)
+    response = client.post("/upscale", files=files)
 
     assert response.status_code == 400
+    result = response.json()
+    assert result["detail"] == "Unsupported file type"
