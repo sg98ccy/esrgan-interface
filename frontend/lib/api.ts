@@ -70,13 +70,18 @@ export function connectToProgressStream(
 ): EventSource {
   const eventSource = new EventSource(`${BACKEND_URL}/progress/${jobId}`);
 
+  let _streamFinished = false;
+
   eventSource.onmessage = (event) => {
     try {
       const data: ProgressEvent = JSON.parse(event.data);
 
       if (data.error) {
+        _streamFinished = true;
         onError(new Error(data.error));
-        eventSource.close();
+        try {
+          eventSource.close();
+        } catch (e) {}
         return;
       }
 
@@ -84,9 +89,14 @@ export function connectToProgressStream(
 
       // Close connection when completed or errored
       if (data.stage === "completed" || data.stage === "error") {
+        _streamFinished = true;
         setTimeout(() => {
-          eventSource.close();
-          onComplete();
+          try {
+            eventSource.close();
+          } catch (e) {}
+          try {
+            onComplete();
+          } catch (e) {}
         }, 500);
       }
     } catch (err) {
@@ -97,9 +107,35 @@ export function connectToProgressStream(
   };
 
   eventSource.onerror = (err) => {
-    console.error("SSE connection error:", err);
-    onError(new Error("Connection to server lost"));
-    eventSource.close();
+    // EventSource fires `onerror` when the connection is broken or closed.
+    // Distinguish a normal/expected close from a real network error:
+    // - readyState === 2 (CLOSED) often indicates the server closed the stream
+    //   after sending completion — treat this as successful completion.
+    // If the stream already delivered a terminal event (completed/error),
+    // treat this onerror as a normal close and do not surface an error.
+    if (_streamFinished) {
+      console.debug("SSE onerror after terminal event — treating as closed");
+      try {
+        onComplete();
+      } catch (e) {}
+    } else if (eventSource.readyState === EventSource.CLOSED) {
+      // If the connection is closed and we didn't see a terminal event,
+      // treat it as a non-diagnostic close (some servers close without final message).
+      console.debug("SSE closed by server without terminal event");
+      try {
+        onComplete();
+      } catch (e) {}
+    } else {
+      console.error("SSE connection error:", err);
+      onError(new Error("Connection to server lost"));
+    }
+
+    // Ensure the connection is cleaned up
+    try {
+      eventSource.close();
+    } catch (e) {
+      /* ignore */
+    }
   };
 
   return eventSource;

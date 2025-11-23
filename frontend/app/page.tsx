@@ -151,7 +151,7 @@ export default function Home() {
   // ============================================================
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
         <div className="container mx-auto px-4 py-6">
@@ -165,7 +165,7 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Upload Section */}
           <ImageUpload
