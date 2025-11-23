@@ -1,10 +1,11 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 from py_real_esrgan.model import RealESRGAN
 from PIL import Image
 import torch
 import io
+import base64
 
 app = FastAPI()
 
@@ -29,7 +30,7 @@ model = RealESRGAN(device, scale=4)
 model.load_weights("weights/RealESRGAN_x4.pth", download=True)
 
 
-@app.post("/api/upscale")
+@app.post("/upscale")
 async def upscale_image(file: UploadFile = File(...)):
     if file.content_type not in {"image/png", "image/jpeg", "image/webp"}:
         raise HTTPException(status_code=400, detail="Unsupported file type")
@@ -43,9 +44,24 @@ async def upscale_image(file: UploadFile = File(...)):
     # Run super resolution
     sr_image = model.predict(image)
 
-    # Return as PNG stream
+    # Convert to base64 for JSON response
     buffer = io.BytesIO()
     sr_image.save(buffer, format="PNG")
     buffer.seek(0)
+    image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
-    return StreamingResponse(buffer, media_type="image/png")
+    return JSONResponse({
+        "success": True,
+        "processedImage": f"data:image/png;base64,{image_base64}",
+        "message": "Image successfully upscaled"
+    })
+
+
+@app.get("/health")
+async def health_check():
+    return JSONResponse({
+        "status": "healthy",
+        "modelLoaded": True,
+        "device": str(device),
+        "message": "ESRGAN backend is ready"
+    })

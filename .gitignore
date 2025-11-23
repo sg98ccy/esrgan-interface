@@ -59,4 +59,7 @@ backend/weights/
 # Test output images (keep input fixtures in version control)
 backend/tests/fixtures/output/
 
+# ----------------------------------------------------------------------
+# Local dev files
+*.bat
 note.txt
