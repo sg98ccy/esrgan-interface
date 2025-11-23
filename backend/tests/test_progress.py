@@ -1,6 +1,6 @@
 # ============================================================
 # Tests for Progress Tracking and SSE Endpoints
-# Simplified version with logging for visibility
+# Simplified version with comprehensive logging
 # ============================================================
 
 import pytest
@@ -46,7 +46,7 @@ def cleanup_jobs():
 
 def test_progress_basic(client):
     """Test basic progress endpoint with existing job"""
-    print("\n[TEST] Starting test_progress_basic")
+    print("\n[TEST] test_progress_basic")
     job_id = "test-job-1"
     
     active_jobs[job_id] = {
@@ -64,7 +64,7 @@ def test_progress_basic(client):
             if line.startswith("data:"):
                 event_count += 1
                 data = json.loads(line[6:])
-                print(f"[TEST] Event {event_count}: stage={data.get('stage')}, scale={data.get('scale')}")
+                print(f"[TEST] Event: {data}")
                 assert data["stage"] == ProcessingStage.COMPLETED.value
                 break
         
@@ -74,7 +74,7 @@ def test_progress_basic(client):
 
 def test_progress_nonexistent_job(client):
     """Test progress endpoint with job that doesn't exist"""
-    print("\n[TEST] Starting test_progress_nonexistent_job")
+    print("\n[TEST] test_progress_nonexistent_job")
     job_id = "fake-job"
     
     with client.stream("GET", f"/progress/{job_id}", timeout=6) as response:
@@ -84,9 +84,9 @@ def test_progress_nonexistent_job(client):
         for line in response.iter_lines():
             if line.startswith("data:"):
                 data = json.loads(line[6:])
-                print(f"[TEST] Received event: {data}")
+                print(f"[TEST] Event: {data}")
                 if "error" in data:
-                    print("[TEST] Error event received as expected")
+                    print("[TEST] Error event received")
                     assert data["stage"] == "error"
                     break
 
@@ -97,7 +97,7 @@ def test_progress_nonexistent_job(client):
 
 def test_upscale_endpoint(client, sample_image):
     """Test upscale endpoint returns success"""
-    print("\n[TEST] Starting test_upscale_endpoint")
+    print("\n[TEST] test_upscale_endpoint")
     
     files = {"file": ("test.png", sample_image, "image/png")}
     data = {"scale": "4"}
@@ -117,7 +117,7 @@ def test_upscale_endpoint(client, sample_image):
 
 def test_upscale_with_2x_scale(client, sample_image):
     """Test 2x upscaling"""
-    print("\n[TEST] Starting test_upscale_with_2x_scale")
+    print("\n[TEST] test_upscale_with_2x_scale")
     
     sample_image.seek(0)
     files = {"file": ("test_2x.png", sample_image, "image/png")}
@@ -130,8 +130,27 @@ def test_upscale_with_2x_scale(client, sample_image):
     assert response.status_code == 200
     
     result = response.json()
-    print(f"[TEST] Scale used: {result['metadata']['scale']}")
+    print(f"[TEST] Scale: {result['metadata']['scale']}")
     assert result["metadata"]["scale"] == 2
+
+
+def test_upscale_with_4x_scale(client, sample_image):
+    """Test 4x upscaling"""
+    print("\n[TEST] test_upscale_with_4x_scale")
+    
+    sample_image.seek(0)
+    files = {"file": ("test_4x.png", sample_image, "image/png")}
+    data = {"scale": "4"}
+    
+    print("[TEST] Submitting 4x upscale request")
+    response = client.post("/upscale", files=files, data=data)
+    
+    print(f"[TEST] Response status: {response.status_code}")
+    assert response.status_code == 200
+    
+    result = response.json()
+    print(f"[TEST] Scale: {result['metadata']['scale']}")
+    assert result["metadata"]["scale"] == 4
 
 
 # ============================================================
@@ -140,7 +159,7 @@ def test_upscale_with_2x_scale(client, sample_image):
 
 def test_scales_endpoint(client):
     """Test /scales endpoint"""
-    print("\n[TEST] Starting test_scales_endpoint")
+    print("\n[TEST] test_scales_endpoint")
     
     response = client.get("/scales")
     print(f"[TEST] Response status: {response.status_code}")
@@ -154,7 +173,7 @@ def test_scales_endpoint(client):
 
 def test_health_endpoint(client):
     """Test /health endpoint"""
-    print("\n[TEST] Starting test_health_endpoint")
+    print("\n[TEST] test_health_endpoint")
     
     response = client.get("/health")
     print(f"[TEST] Response status: {response.status_code}")

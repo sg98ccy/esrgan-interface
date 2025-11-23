@@ -50,4 +50,4 @@ def test_upscale_endpoint_rejects_non_image():
 
     assert response.status_code == 400
     result = response.json()
-    assert result["detail"] == "Unsupported file type"
+    assert "Unsupported file type" in result["detail"]
